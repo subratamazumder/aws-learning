@@ -1,7 +1,7 @@
 # API Gateway
-## Custome Domain
-### Create R53 Hosted Zone
-### Create R53 A Record Set
+## Custom Domain with mTLS
+### Create Hello API
+### Request Free Domain Certificate
 ### Setup Trust Store
 #### Create Cert
 ```console
@@ -18,9 +18,17 @@ openssl x509 -in apigateway-client.crt -text -noout
 aws s3 cp apigateway-client.crt s3://dev-test-apigateway-ts --profile devtest
 ```
 #### Update Custom Domain
-Update MTLS trust store as `s3://dev-test-apigateway-ts/apigateway-client.crt`
 
-### Test Without Client Certificate
+Update MTLS trust store as `s3://dev-test-apigateway-ts/apigateway-client.crt`
+### Create Custom Domain with mTLS
+aws apigatewayv2 create-domain-name --region us-east-2 \
+    --domain-name api.cloudhandson.com \
+    --domain-name-configurations CertificateArn=arn:aws:acm:us-east-1:xxxxxxxxxxxx:certificate/290ecefd-2b04-4612-81c0-7865a0d739eb
+    --mutual-tls-authentication truststoreUri=s3://dev-test-apigateway-ts/apigateway-client.crt
+### Create R53 Hosted Zone
+### Update Registrarer NS records
+### Create R53 A Record Set
+### Test Without Client Certificate (SSL error expected)
 
 ```console
 
@@ -110,3 +118,35 @@ curl: (35) LibreSSL SSL_connect: SSL_ERROR_SYSCALL in connection to api.cloudhan
   "price": 124.99
 * Connection #0 to host api.cloudhandson.com left intact
 }* Closing connection 0
+```
+
+### Disable API
+```console
+subratas-mbp  ~/workspace/aws-learning/apigateway   master ●  curl -i  https://pjb8w9p0h0.execute-api.us-east-1.amazonaws.com/test/pets/2
+HTTP/2 200
+date: Sun, 04 Oct 2020 01:16:09 GMT
+content-type: application/json
+content-length: 49
+x-amzn-requestid: a71736ee-ee70-4f57-acd2-c5df623346cc
+access-control-allow-origin: *
+x-amz-apigw-id: T3JN7Ev8oAMFW8w=
+x-amzn-trace-id: Root=1-5f792259-26a9fd92560d294b591ffb38
+
+{
+  "id": 2,
+  "type": "cat",
+  "price": 124.99
+}
+```
+aws apigatewayv2 get-apis --region us-east-1 --profile devtest
+aws apigatewayv2 get-apis --region ap-south-1 --profile devtest
+aws apigatewayv2 get-api-mappings --domain-name api.cloudhandson.com --region us-east-1 --profile devtest 
+
+```console
+(Needs higher version of V2 CLI 2.0.54+)
+aws apigatewayv2 update-api \
+    --api-id pjb8w9p0h0 \
+    --disable-execute-api-endpoint \
+    --region us-east-1 \
+    --profile devtest
+```
