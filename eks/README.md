@@ -79,7 +79,9 @@ aws eks update-kubeconfig --name $MY_EKS_CLUSTER --region $AWS_DEFAULT_REGION
 
 
 ## Clean Up
-aws ec2 delete-key-pair --key-name eks-poc-keypair
+eksctl delete nodegroup --cluster=$MY_EKS_CLUSTER --name=$MY_EKS_PUB_NODE_GROUP1
+eksctl delete cluster $MY_EKS_CLUSTER
+aws ec2 delete-key-pair --key-name $MY_EKS_KEYPAIR
 
 ## Reference
 https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
