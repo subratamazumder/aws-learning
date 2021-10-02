@@ -22,13 +22,15 @@ eksctl version
 export AWS_DEFAULT_PROFILE=devtest
 export AWS_DEFAULT_REGION=eu-west-2
 export MY_EKS_CLUSTER=eks-eprescription-poc
+export MY_EKS_KEYPAIR=eks-poc-keypair
+export MY_EKS_PUB_NODE_GROUP1=eks-eprescription-poc-ng-pub1
 
 ```
 ### KeyPair
 ```
-aws ec2 create-key-pair --key-name eks-poc-keypair --query 'KeyMaterial' --output text > eks-poc-keypair.pem
-openssl rsa -in eks-poc-keypair.pem -check
-chmod 400 eks-poc-keypair.pem
+aws ec2 create-key-pair --key-name $MY_EKS_KEYPAIR --query 'KeyMaterial' --output text > $MY_EKS_KEYPAIR.pem
+openssl rsa -in $MY_EKS_KEYPAIR.pem -check
+chmod 400 $MY_EKS_KEYPAIR.pem
 
 ```
 ### Create Cluster
@@ -45,15 +47,33 @@ eks-eprescription-poc	eu-west-2	True
 ```
 ### IAM Roles
 To use IAM roles for service accounts, an IAM OIDC provider must exist for your cluster.
-
-eksctl utils associate-iam-oidc-provider \
-    --cluster $MY_EKS_CLUSTER \
-    --approve
+```
+eksctl utils associate-iam-oidc-provider --cluster $MY_EKS_CLUSTER --approve
 
  ~/workspace/aws-eks  aws eks describe-cluster --name $MY_EKS_CLUSTER --query "cluster.identity.oidc.issuer" --output text
 aws iam list-open-id-connect-providers | grep FC516FA5668564DCACE63388A48F564F
 DELETE ME - https://oidc.eks.eu-west-2.amazonaws.com/id/FC516FA5668564DCACE63388A48F564F
+```
+
 ### Create Node Group
+eksctl create nodegroup --cluster=$MY_EKS_CLUSTER \
+                       --name=$MY_EKS_PUB_NODE_GROUP1 \
+                       --managed \
+                       --node-type=t3.medium \
+                       --node-ami-family=AmazonLinux2 \
+                       --nodes=2 \
+                       --nodes-min=2 \
+                       --nodes-max=3 \
+                       --node-volume-size=25 \
+                       --instance-prefix=eprescription-poc \
+                       --ssh-access \
+                       --ssh-public-key=$MY_EKS_KEYPAIR \
+                       --asg-access \
+                       --external-dns-access \
+                       --full-ecr-access \
+                       --appmesh-access \
+                       --alb-ingress-access
+eksctl create nodegroup --help [for more information]
 ## Clean Up
 aws ec2 delete-key-pair --key-name eks-poc-keypair
 
@@ -62,7 +82,11 @@ https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
 https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html
 https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html
 https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html
+https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html
 https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2-keypairs.html
 https://www.sslshopper.com/article-most-common-openssl-commands.html
 
-
+## Issues Faced
+1. While ceating node group "Not authorized to perform: iam:CreateRole"
+Fix - eksctl delete nodegroup --region=eu-west-2 --cluster=eks-eprescription-poc --name=$MY_EKS_PUB_NODE_GROUP1
+Delete AWSCompromisedKeyQuarantineV2 managed policy from the IAM user which is executing eksctl CLIs 
