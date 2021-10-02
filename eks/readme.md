@@ -13,13 +13,23 @@ kubectl version --short --client
 brew tap weaveworks/tap
 brew install weaveworks/tap/eksctl
 eksctl version
-export AWS_DEFAULT_PROFILE=devtest
 
 ```
 ## Cluster Pre Requisite
+### CLIs Defaults
+
+```
+export AWS_DEFAULT_PROFILE=devtest
+export AWS_DEFAULT_REGION=eu-west-2
+
+```
 ### KeyPair
+```
+aws ec2 create-key-pair --key-name eks-poc-keypair
+save key in to a file say eks-poc-keypair.pem
+chmod 700 eks-poc-keypair.pem
+```
 ### IAM Roles
 ### Create Cluster
 ### Create Node Group
-
 
