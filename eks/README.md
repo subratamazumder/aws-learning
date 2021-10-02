@@ -74,6 +74,10 @@ eksctl create nodegroup --cluster=$MY_EKS_CLUSTER \
                        --appmesh-access \
                        --alb-ingress-access
 eksctl create nodegroup --help [for more information]
+
+aws eks update-kubeconfig --name $MY_EKS_CLUSTER --region $AWS_DEFAULT_REGION
+
+
 ## Clean Up
 aws ec2 delete-key-pair --key-name eks-poc-keypair
 
@@ -90,3 +94,9 @@ https://www.sslshopper.com/article-most-common-openssl-commands.html
 1. While ceating node group "Not authorized to perform: iam:CreateRole"
 Fix - eksctl delete nodegroup --region=eu-west-2 --cluster=eks-eprescription-poc --name=$MY_EKS_PUB_NODE_GROUP1
 Delete AWSCompromisedKeyQuarantineV2 managed policy from the IAM user which is executing eksctl CLIs 
+2. While running kubclt commands to get node details
+192  ~/workspace/aws-eks  kubectl get nodes
+Error from server (InternalError): an error on the server ("<!DOCTYPE html>\n<html>\n<head>\n<title>Error</title>\n<style>\n    body {\n        width: 35em;\n        margin: 0 auto;\n        font-family: Tahoma, Verdana, Arial, sans-serif;\n    }\n</style>\n</head>\n<body>\n<h1>An error occurred.</h1>\n<p>Sorry, the page you are looking for is currently unavailable.<br/>\nPlease try again later.</p>\n<p>If you are the system administrator of this resource then you should check\nthe error log for details.</p>\n<p><em>Faithfully yours, nginx.</em></p>\n</body>\n</html>") has prevented the request from succeeding
+
+Fix - remove existing ~.kube/config & then run 
+aws eks update-kubeconfig --name $MY_EKS_CLUSTER --region $AWS_DEFAULT_REGION
