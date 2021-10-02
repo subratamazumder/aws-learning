@@ -1,0 +1,31 @@
+version: "2"
+services:
+
+  # AWS OTel Collector
+  aws-ot-collector:
+    image: amazon/aws-otel-collector:latest
+    command: ["--config=/etc/otel-agent-config.yaml", "--log-level=DEBUG"]
+    environment:
+      - AWS_ACCESS_KEY_ID=AKIAYINHTEVPHY7VAK4N
+      - AWS_SECRET_ACCESS_KEY=SpZu2hHWIPkO4vlx5ZFEkNAxL/0XAqX8iWBrC8D/
+      - AWS_REGION=ap-south-1
+
+    volumes:
+      - ../examples/config-test.yaml:/etc/otel-agent-config.yaml
+      - ~/.aws:/root/.aws
+    ports:
+      - "1777:1777"   # pprof extension
+      - "55679:55679" # zpages extension
+      - "55680:55680" # OTLP receiver
+      - "13133"       # health_check
+
+  # Metric and Trace Sample Data Generator
+  ot-metric-emitter:
+    image: aottestbed/aws-otel-collector-sample-app:java-0.1.0
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=aws-ot-collector:55680
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=AOCDockerDemo,service.name=AOCDockerDemoService
+      - S3_REGION=us-west-2
+    depends_on:
+      - aws-ot-collector
+
