@@ -85,7 +85,7 @@ eksctl create nodegroup --help [for more information]
 aws eks update-kubeconfig --name $MY_EKS_CLUSTER --region $AWS_DEFAULT_REGION
 ### Get External IP for Testing
 kubectl get nodes -o wide
-export MY_EKS_NODE1_EXTERNAL_IP=18.168.202.30
+export MY_EKS_NODE1_EXTERNAL_IP=xxx.xxx.xxx.xxx
 ### Build a docker image
 https://github.com/subratamazumder/go-docker
 
