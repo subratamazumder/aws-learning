@@ -76,9 +76,27 @@ eksctl create nodegroup --cluster=$MY_EKS_CLUSTER \
 eksctl create nodegroup --help [for more information]
 
 aws eks update-kubeconfig --name $MY_EKS_CLUSTER --region $AWS_DEFAULT_REGION
+### Build a docker image
 
+docker tag <existing-image> <hub-user>/<repo-name>[:<tag>]
+
+### Create a POD
+kubectl run nginx-pod --image stacksimplify/kubenginx:1.0.0
+kubectl get pods
+kubectl describe pods nginx-pod
+
+### Create a Service
+kubectl expose pod nginx-pod  --type=NodePort --port=80 --target-port=80 --name=nginx [default protocol is TCP]
+
+# Retrieve current IP address
+export MY_IP=`curl -s http://whatismyip.akamai.com/`
+
+# Authorize access on ports 22 and 3389
+aws ec2 authorize-security-group-ingress --group-id sg-0283eb6dc9e7b6142 --protocol tcp --port 31351 --cidr $MY_IP/32 --output text
 
 ## Clean Up
+undo >> SG changes aws ec2 revoke-security-group-ingress --group-id sg-0283eb6dc9e7b6142 --protocol tcp --port 31351 --cidr $MY_IP/32 --output text
+
 eksctl delete nodegroup --cluster=$MY_EKS_CLUSTER --name=$MY_EKS_PUB_NODE_GROUP1
 eksctl delete cluster $MY_EKS_CLUSTER
 aws ec2 delete-key-pair --key-name $MY_EKS_KEYPAIR
