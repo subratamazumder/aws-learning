@@ -93,16 +93,13 @@ https://github.com/subratamazumder/go-docker
 
 ### Create a POD
 ```
-kubectl run nginx-pod --image stacksimplify/kubenginx:1.0.0
 kubectl run eprescription-reg-pod --image dockersubrata/eprescription-reg-service-image:1.0
 kubectl get pods
-kubectl describe pods nginx-pod
 kubectl describe pods eprescription-reg-pod
 ```
 
 ### Create a Service
 ```
-kubectl expose pod nginx-pod  --type=NodePort --port=80 --target-port=80 --name=nginx
 kubectl expose pod eprescription-reg-pod  --type=NodePort --port=8081 --target-port=8081 --name=eprescription-reg-svc
 [default protocol is TCP]
 ```
