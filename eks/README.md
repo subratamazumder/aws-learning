@@ -159,7 +159,9 @@ https://www.sslshopper.com/article-most-common-openssl-commands.html
 
 ## Issues Faced
 - While `ceating node group` got error as "Not authorized to perform: iam:CreateRole"
+
 Fix -
+
 ```
 eksctl delete nodegroup --region=eu-west-2 --cluster=eks-eprescription-poc --name=$MY_EKS_PUB_NODE_GROUP1
 ```
@@ -173,6 +175,8 @@ Error from server (InternalError): an error on the server ("<!DOCTYPE html>\n<ht
 ```
 
 Fix - 
-Remove existing `~.kube/config` & then run 
-```aws eks update-kubeconfig --name $MY_EKS_CLUSTER --region $AWS_DEFAULT_REGION
+
+Remove existing `~.kube/config` & then update kubectl cli config 
+```
+aws eks update-kubeconfig --name $MY_EKS_CLUSTER --region $AWS_DEFAULT_REGION
 ```
