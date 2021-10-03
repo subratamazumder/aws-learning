@@ -24,6 +24,7 @@ export AWS_DEFAULT_REGION=eu-west-2
 export MY_EKS_CLUSTER=eks-eprescription-poc
 export MY_EKS_KEYPAIR=eks-poc-keypair
 export MY_EKS_PUB_NODE_GROUP1=eks-eprescription-poc-ng-pub1
+export MY_IP=`curl -s http://whatismyip.akamai.com/`
 
 ```
 ### KeyPair
@@ -49,13 +50,19 @@ eks-eprescription-poc	eu-west-2	True
 To use IAM roles for service accounts, an IAM OIDC provider must exist for your cluster.
 ```
 eksctl utils associate-iam-oidc-provider --cluster $MY_EKS_CLUSTER --approve
-
+```
+#### Verify IAM OIDC Provider
+```
  ~/workspace/aws-eks  aws eks describe-cluster --name $MY_EKS_CLUSTER --query "cluster.identity.oidc.issuer" --output text
-aws iam list-open-id-connect-providers | grep FC516FA5668564DCACE63388A48F564F
-DELETE ME - https://oidc.eks.eu-west-2.amazonaws.com/id/FC516FA5668564DCACE63388A48F564F
+https://oidc.eks.eu-west-2.amazonaws.com/id/FCXXXXXXXXXXXXXXX64F
+
+aws iam list-open-id-connect-providers | grep FCXXXXXXXXXXXXXXX64F
+
+"Arn": "arn:aws:iam::XXXXXXXXXXXX:oidc-provider/oidc.eks.eu-west-2.amazonaws.com/id/FCXXXXXXXXXXXXXXX64F"
 ```
 
 ### Create Node Group
+```
 eksctl create nodegroup --cluster=$MY_EKS_CLUSTER \
                        --name=$MY_EKS_PUB_NODE_GROUP1 \
                        --managed \
@@ -76,31 +83,74 @@ eksctl create nodegroup --cluster=$MY_EKS_CLUSTER \
 eksctl create nodegroup --help [for more information]
 
 aws eks update-kubeconfig --name $MY_EKS_CLUSTER --region $AWS_DEFAULT_REGION
+### Get External IP for Testing
+kubectl get nodes -o wide
+export MY_EKS_NODE1_EXTERNAL_IP=18.168.202.30
 ### Build a docker image
+https://github.com/subratamazumder/go-docker
 
-docker tag <existing-image> <hub-user>/<repo-name>[:<tag>]
+```
 
 ### Create a POD
+```
 kubectl run nginx-pod --image stacksimplify/kubenginx:1.0.0
+kubectl run eprescription-reg-pod --image dockersubrata/eprescription-reg-service-image:1.0
 kubectl get pods
 kubectl describe pods nginx-pod
+kubectl describe pods eprescription-reg-pod
+```
 
 ### Create a Service
-kubectl expose pod nginx-pod  --type=NodePort --port=80 --target-port=80 --name=nginx [default protocol is TCP]
+```
+kubectl expose pod nginx-pod  --type=NodePort --port=80 --target-port=80 --name=nginx
+kubectl expose pod eprescription-reg-pod  --type=NodePort --port=8081 --target-port=8081 --name=eprescription-reg-svc
+[default protocol is TCP]
+```
+### Get NodePort for Testing
+```
+kubectl get service -o wide
+```
+# Authorize ingress rule of worker node for a specific node-port
+aws ec2 authorize-security-group-ingress --group-id sg-0283eb6dc9e7b6142 --protocol tcp --port 31719 --cidr $MY_IP/32 --output text
 
-# Retrieve current IP address
-export MY_IP=`curl -s http://whatismyip.akamai.com/`
+### Testing
+#### Run Test
+```
+ ~/workspace/aws-eks  curl -is http://$MY_EKS_NODE1_EXTERNAL_IP:31719/health
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Sun, 03 Oct 2021 01:54:02 GMT
+Content-Length: 15
+{"status":"OK"}
 
-# Authorize access on ports 22 and 3389
-aws ec2 authorize-security-group-ingress --group-id sg-0283eb6dc9e7b6142 --protocol tcp --port 31351 --cidr $MY_IP/32 --output text
+ ~/workspace/aws-eks  curl -X POST -is http://$MY_EKS_NODE1_EXTERNAL_IP:31719/registrations
+HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+Date: Sun, 03 Oct 2021 01:54:33 GMT
+Content-Length: 57
+{"registrationId":"dea7d54b-bdb7-4f12-a704-e4165eafc7d4"}
+```
+#### Verify logs
+```
+kubectl logs -f eprescription-reg-pod
 
+```
 ## Clean Up
-undo >> SG changes aws ec2 revoke-security-group-ingress --group-id sg-0283eb6dc9e7b6142 --protocol tcp --port 31351 --cidr $MY_IP/32 --output text
-
+### Undo temp SG changes 
+```
+aws ec2 revoke-security-group-ingress --group-id sg-0283eb6dc9e7b6142 --protocol tcp --port 31719 --cidr $MY_IP/32 --output text
+```
+### Delete EKS Objects
+```
+kubectl delete svc eprescription-reg-svc
+kubectl delete pod eprescription-reg-pod
 eksctl delete nodegroup --cluster=$MY_EKS_CLUSTER --name=$MY_EKS_PUB_NODE_GROUP1
 eksctl delete cluster $MY_EKS_CLUSTER
+```
+### Delete Other Resources
+```
 aws ec2 delete-key-pair --key-name $MY_EKS_KEYPAIR
-
+```
 ## Reference
 https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
 https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html
@@ -111,12 +161,21 @@ https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2-keypairs.html
 https://www.sslshopper.com/article-most-common-openssl-commands.html
 
 ## Issues Faced
-1. While ceating node group "Not authorized to perform: iam:CreateRole"
-Fix - eksctl delete nodegroup --region=eu-west-2 --cluster=eks-eprescription-poc --name=$MY_EKS_PUB_NODE_GROUP1
-Delete AWSCompromisedKeyQuarantineV2 managed policy from the IAM user which is executing eksctl CLIs 
-2. While running kubclt commands to get node details
-192  ~/workspace/aws-eks  kubectl get nodes
-Error from server (InternalError): an error on the server ("<!DOCTYPE html>\n<html>\n<head>\n<title>Error</title>\n<style>\n    body {\n        width: 35em;\n        margin: 0 auto;\n        font-family: Tahoma, Verdana, Arial, sans-serif;\n    }\n</style>\n</head>\n<body>\n<h1>An error occurred.</h1>\n<p>Sorry, the page you are looking for is currently unavailable.<br/>\nPlease try again later.</p>\n<p>If you are the system administrator of this resource then you should check\nthe error log for details.</p>\n<p><em>Faithfully yours, nginx.</em></p>\n</body>\n</html>") has prevented the request from succeeding
+- While `ceating node group` got error as "Not authorized to perform: iam:CreateRole"
+Fix -
+```
+eksctl delete nodegroup --region=eu-west-2 --cluster=eks-eprescription-poc --name=$MY_EKS_PUB_NODE_GROUP1
+```
 
-Fix - remove existing ~.kube/config & then run 
-aws eks update-kubeconfig --name $MY_EKS_CLUSTER --region $AWS_DEFAULT_REGION
+Delete `AWSCompromisedKeyQuarantineV2` managed policy from the IAM user which is executing eksctl CLIs
+
+- While running `kubclt get node` got below error
+
+```~/workspace/aws-eks  kubectl get nodes
+Error from server (InternalError): an error on the server ("<!DOCTYPE html>\n<html>\n<head>\n<title>Error</title>\n<style>\n    body {\n        width: 35em;\n        margin: 0 auto;\n        font-family: Tahoma, Verdana, Arial, sans-serif;\n    }\n</style>\n</head>\n<body>\n<h1>An error occurred.</h1>\n<p>Sorry, the page you are looking for is currently unavailable.<br/>\nPlease try again later.</p>\n<p>If you are the system administrator of this resource then you should check\nthe error log for details.</p>\n<p><em>Faithfully yours, nginx.</em></p>\n</body>\n</html>") has prevented the request from succeeding
+```
+
+Fix - 
+Remove existing `~.kube/config` & then run 
+```aws eks update-kubeconfig --name $MY_EKS_CLUSTER --region $AWS_DEFAULT_REGION
+```

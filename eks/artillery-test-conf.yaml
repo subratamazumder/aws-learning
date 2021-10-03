@@ -1,0 +1,14 @@
+config:
+  target: "http://18.168.202.30:31719"
+  phases:
+    - duration: 10
+      arrivalRate: 1
+scenarios:
+  - flow:
+      - log: "New virtual user running"
+      - get:
+          url: "/health"
+      - post:
+          url: "/registrations"
+          json:
+            userName: "test-user-name"
