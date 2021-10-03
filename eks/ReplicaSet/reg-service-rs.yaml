@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: reg-service-rs
+  labels:
+    app: reg-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: reg-service
+  template:
+    metadata:
+      labels:
+        app: reg-service
+    spec:
+      containers:
+      - name: reg-service-app
+        image: dockersubrata/eprescription-reg-service-image:3.0
