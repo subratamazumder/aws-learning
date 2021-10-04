@@ -95,16 +95,6 @@ https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2-keypairs.html
 https://www.sslshopper.com/article-most-common-openssl-commands.html
 
 ## Issues Faced
-- While `ceating node group` got error as "Not authorized to perform: iam:CreateRole"
-
-Fix -
-
-```
-eksctl delete nodegroup --region=eu-west-2 --cluster=eks-eprescription-poc --name=$MY_EKS_PUB_NODE_GROUP1
-```
-
-Delete `AWSCompromisedKeyQuarantineV2` managed policy from the IAM user which is executing eksctl CLIs
-
 - While running `kubclt get node` got below error
 
 ```~/workspace/aws-eks  kubectl get nodes

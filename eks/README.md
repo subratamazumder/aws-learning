@@ -36,7 +36,7 @@ chmod 400 $MY_EKS_KEYPAIR.pem
 ```
 ### Create Cluster
 ```
-eksctl create cluster --name=$MY_EKS_CLUSTER --without-nodegroup
+eksctl create cluster --name=$MY_EKS_CLUSTER --without-nodegroup --tag="name:poc"
 eksctl get cluster
 
  192  ~/workspace/aws-eks  eksctl get cluster

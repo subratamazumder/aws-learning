@@ -109,6 +109,100 @@ Content-Length: 138
 {"processingNode":"reg-service-deployment-6c484d5db-g7k5s","registrationId":"54c20ce9-8578-41f3-936e-028ef1857c2c","serviceVersion":"5.0"}%
  192  ~/workspace/aws-learning/eks   master ● 
 ```
+## Rollout newer version 6.0
+kubectl edit deployment/reg-service-deployment --record=true
+ 192  ~/workspace/aws-learning/eks   master ●  kubectl edit deployment/reg-service-deployment --record=true
+deployment.apps/reg-service-deployment edited
+ 192  ~/workspace/aws-learning/eks   master ● 
+
+  192  ~/workspace/aws-learning/eks   master ●  kubectl rollout status deployment/reg-service-deployment
+deployment "reg-service-deployment" successfully rolled out
+ 192  ~/workspace/aws-learning/eks   master ● 
+
+Anothe RS got created  
+192  ~/workspace/aws-learning/eks   master ●  kubectl get rs
+NAME                                DESIRED   CURRENT   READY   AGE
+reg-service-deployment-546f949d85   0         0         0       3h12m
+reg-service-deployment-568f847c47   5         5         5       2m3s
+reg-service-deployment-6c484d5db    0         0         0       24m
+ 192  ~/workspace/aws-learning/eks   master ● 
+## Test Service with image 6.0 roll out
+ 192  ~/workspace/aws-learning/eks   master ●  curl -X POST -is http://$MY_EKS_NODE1_EXTERNAL_IP:30274/ep-registration-service/registrations
+HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+Date: Mon, 04 Oct 2021 00:19:16 GMT
+Content-Length: 139
+
+{"processingNode":"reg-service-deployment-568f847c47-2jbrh","registrationId":"00c6aecb-a817-4f33-b306-8cd1f20e1133","serviceVersion":"6.0"}%
+ 192  ~/workspace/aws-learning/eks   master ● 
+## Verify Rollout History
+ ```
+ 192  ~/workspace/aws-learning/eks   master ●  kubectl rollout history deployment/reg-service-deployment
+deployment.apps/reg-service-deployment
+REVISION  CHANGE-CAUSE
+1         <none>
+2         kubectl set image deployment/reg-service-deployment eprescription-reg-service-image=dockersubrata/eprescription-reg-service-image:5.0 --record=true
+3         kubectl edit deployment/reg-service-deployment --record=true
+
+ 192  ~/workspace/aws-learning/eks   master ● 
+
+
+kubectl rollout history deployment/reg-service-deployment --revision=2
+
+ ✘ 192  ~/workspace/aws-learning/eks   master ●  kubectl rollout history deployment/reg-service-deployment --revision=2
+deployment.apps/reg-service-deployment with revision #2
+Pod Template:
+  Labels:	app=reg-service-deployment
+	pod-template-hash=6c484d5db
+  Annotations:	kubernetes.io/change-cause:
+	  kubectl set image deployment/reg-service-deployment eprescription-reg-service-image=dockersubrata/eprescription-reg-service-image:5.0 --re...
+  Containers:
+   eprescription-reg-service-image:
+    Image:	dockersubrata/eprescription-reg-service-image:5.0
+    Port:	<none>
+    Host Port:	<none>
+    Environment:	<none>
+    Mounts:	<none>
+  Volumes:	<none>
+
+ 192  ~/workspace/aws-learning/eks   master ● 
+
+```
+## Undo/Roll Back to 5.0 (revision=2)
+```
+kubectl rollout undo deployment/reg-service-deployment --to-revision=2
+
+ 192  ~/workspace/aws-learning/eks   master ●  kubectl rollout undo deployment/reg-service-deployment --to-revision=2
+deployment.apps/reg-service-deployment rolled back
+ 192  ~/workspace/aws-learning/eks   master ●  kubectl get pods
+NAME                                      READY   STATUS        RESTARTS   AGE
+reg-service-deployment-568f847c47-7lj64   0/1     Terminating   0          12m
+reg-service-deployment-6c484d5db-5vxm2    1/1     Running       0          8s
+reg-service-deployment-6c484d5db-dc4p8    1/1     Running       0          7s
+reg-service-deployment-6c484d5db-n87p4    1/1     Running       0          10s
+reg-service-deployment-6c484d5db-nzx87    1/1     Running       0          10s
+reg-service-deployment-6c484d5db-vdk29    1/1     Running       0          10s
+ 192  ~/workspace/aws-learning/eks   master ● 
+
+Previous RS got activated now with new pods for that specific RS
+ NAME                                DESIRED   CURRENT   READY   AGE
+reg-service-deployment-546f949d85   0         0         0       3h23m
+reg-service-deployment-568f847c47   0         0         0       12m
+reg-service-deployment-6c484d5db    5         5         5       35m
+ 192  ~/workspace/aws-learning/eks   master ● 
+
+```
+## Test Service with image 5.0 post undo/roll back
+```
+ 192  ~/workspace/aws-learning/eks   master ●  curl -X POST -is http://$MY_EKS_NODE1_EXTERNAL_IP:30274/ep-registration-service/registrations
+HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+Date: Mon, 04 Oct 2021 00:32:56 GMT
+Content-Length: 138
+
+{"processingNode":"reg-service-deployment-6c484d5db-nzx87","registrationId":"69b2f9de-78b4-438f-a7ba-4f551cde5ac4","serviceVersion":"5.0"}%
+ 192  ~/workspace/aws-learning/eks   master ● 
+```
 ## Clean Up
 
 ### Undo temp SG changes 

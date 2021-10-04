@@ -1,7 +1,7 @@
 ### Create Node Group
 ```
 eksctl create nodegroup --cluster=$MY_EKS_CLUSTER \
-                       --name=$MY_EKS_PUB_NODE_GROUP1 \
+                       --name=$MY_EKS_PRV_NODE_GROUP1 \
                        --managed \
                        --node-type=t3.medium \
                        --node-ami-family=AmazonLinux2 \
@@ -9,64 +9,73 @@ eksctl create nodegroup --cluster=$MY_EKS_CLUSTER \
                        --nodes-min=2 \
                        --nodes-max=3 \
                        --node-volume-size=25 \
-                       --instance-prefix=eprescription-poc \
                        --ssh-access \
                        --ssh-public-key=$MY_EKS_KEYPAIR \
                        --asg-access \
                        --external-dns-access \
                        --full-ecr-access \
                        --appmesh-access \
-                       --alb-ingress-access
+                       --alb-ingress-access \
+                       --node-private-networking
 eksctl create nodegroup --help [for more information]
-
-aws eks update-kubeconfig --name $MY_EKS_CLUSTER --region $AWS_DEFAULT_REGION
-### Get External IP for Testing
-kubectl get nodes -o wide
-export MY_EKS_NODE1_EXTERNAL_IP=xxx.xxx.xxx.xxx
-### Build a docker image
-https://github.com/subratamazumder/go-docker
-
+```
+## Create Deployments
+```
+ 192  ~/workspace/aws-learning/clean-up   master ●  kubectl create deployment reg-service-deployment --image=dockersubrata/eprescription-reg-service-image:6.0
+deployment.apps/reg-service-deployment created
+ 192  ~/workspace/aws-learning/clean-up   master ●  kubectl get deploy
+NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+reg-service-deployment   1/1     1            1           10s
+ 192  ~/workspace/aws-learning/clean-up   master ●  kubectl get po
+NAME                                      READY   STATUS    RESTARTS   AGE
+reg-service-deployment-568f847c47-bjp2q   1/1     Running   0          22s
+ 192  ~/workspace/aws-learning/clean-up   master ●  kubectl get rs
+NAME                                DESIRED   CURRENT   READY   AGE
+reg-service-deployment-568f847c47   1         1         1       26s
+ 192  ~/workspace/aws-learning/clean-up   master ● 
+```
+## Expose Service over ELB port 80
 ```
 
-### Create a POD
-```
-kubectl run eprescription-reg-pod --image dockersubrata/eprescription-reg-service-image:2.0
-kubectl get pods
-kubectl describe pods eprescription-reg-pod
-```
+kubectl expose deployment reg-service-deployment --type=LoadBalancer --port=80 --target-port=8081 --name=reg-service-deployment-lb-svc
 
-### Create a Service
 ```
-kubectl expose pod eprescription-reg-pod  --type=NodePort --port=8081 --target-port=8081 --name=eprescription-reg-svc
-[default protocol is TCP]
+### Get Endpoint for Testing
 ```
-### Get NodePort for Testing
-```
-kubectl get service -o wide
+192  ~/workspace/aws-learning/clean-up   master ●  kubectl get svc
+NAME                            TYPE           CLUSTER-IP      EXTERNAL-IP                                                               PORT(S)        AGE
+kubernetes                      ClusterIP      10.100.0.1      <none>                                                                    443/TCP        153m
+reg-service-deployment-lb-svc   LoadBalancer   10.100.141.72   a28139536c4364e9fa7a9007c68acc22-2139149315.eu-west-2.elb.amazonaws.com   80:32767/TCP   7m7s
+ 192  ~/workspace/aws-learning/clean-up   master ● 
+
+ export  MY_EKS_PRV_NODE1_EXTERNAL_DNS=a28139536c4364e9fa7a9007c68acc22-2139149315.eu-west-2.elb.amazonaws.com
 ```
 # Authorize ingress rule of worker node for a specific node-port
 aws ec2 authorize-security-group-ingress --group-id sg-0283eb6dc9e7b6142 --protocol tcp --port 31719 --cidr $MY_IP/32 --output text
 
 ### Testing
 #### Run Test
-```
- ~/workspace/aws-eks  curl -is http://$MY_EKS_NODE1_EXTERNAL_IP:31719/health
-HTTP/1.1 200 OK
-Content-Type: application/json; charset=utf-8
-Date: Sun, 03 Oct 2021 01:54:02 GMT
-Content-Length: 15
-{"status":"OK"}
 
- ~/workspace/aws-eks  curl -X POST -is http://$MY_EKS_NODE1_EXTERNAL_IP:31719/registrations
+```
+ 192  ~/workspace/aws-learning/clean-up   master ●  curl -X POST -is http://$MY_EKS_PRV_NODE1_EXTERNAL_DNS/ep-registration-service/registrations
 HTTP/1.1 201 Created
 Content-Type: application/json; charset=utf-8
-Date: Sun, 03 Oct 2021 01:54:33 GMT
-Content-Length: 57
-{"registrationId":"dea7d54b-bdb7-4f12-a704-e4165eafc7d4"}
+Date: Mon, 04 Oct 2021 16:06:53 GMT
+Content-Length: 139
+
+{"processingNode":"reg-service-deployment-568f847c47-bjp2q","registrationId":"3644d581-a8f2-49bb-a36a-39be2d14c67b","serviceVersion":"6.0"}%
+ 192  ~/workspace/aws-learning/clean-up   master ● 
 ```
 #### Verify logs
 ```
-kubectl logs -f eprescription-reg-pod
+ 192  ~/workspace/aws-learning/clean-up   master ●  kubectl get pods
+NAME                                      READY   STATUS    RESTARTS   AGE
+reg-service-deployment-568f847c47-bjp2q   1/1     Running   0          22m
+ 192  ~/workspace/aws-learning/clean-up   master ●  kubectl logs -f reg-service-deployment-568f847c47-bjp2q
+2021/10/04 15:45:25 HTTP Go Server is Listening on  reg-service-deployment-568f847c47-bjp2q : 8081
+2021/10/04 16:06:53 Request received from 192.168.168.228:12977
+2021/10/04 16:06:53 Returning 201 from node reg-service-deployment-568f847c47-bjp2q
+
 
 ```
 ## Clean Up
@@ -78,7 +87,7 @@ aws ec2 revoke-security-group-ingress --group-id sg-0283eb6dc9e7b6142 --protocol
 ```
 kubectl delete svc eprescription-reg-svc
 kubectl delete pod eprescription-reg-pod
-eksctl delete nodegroup --cluster=$MY_EKS_CLUSTER --name=$MY_EKS_PUB_NODE_GROUP1
+eksctl delete nodegroup --cluster=$MY_EKS_CLUSTER --name=$MY_EKS_PRV_NODE_GROUP1
 eksctl delete cluster $MY_EKS_CLUSTER
 ```
 ### Delete Other Resources
