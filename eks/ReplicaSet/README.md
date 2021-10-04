@@ -6,7 +6,7 @@
 ```
 kubectl create -f reg-service-rs.yaml
 ```
-## Verify Result Set
+## Verify Replica Set
 ```
 kubectl describe rs reg-service-rs
 kubectl get pods reg-service-rs-72gcs -o yaml
@@ -21,7 +21,7 @@ kubectl expose rs reg-service-rs  --type=NodePort --port=8081 --target-port=8081
 kubectl get service -o wide
 ```
 
-# Authorize ingress rule of worker node for a specific node-port
+# Authorize ingress rule (remote access) of worker node for a specific node-port
 aws ec2 authorize-security-group-ingress --group-id sg-0283eb6dc9e7b6142 --protocol tcp --port 32510 --cidr $MY_IP/32 --output text
 
 ## Test Service
@@ -81,8 +81,16 @@ Content-Length: 97
 
 {"processingNode":"reg-service-rs-m64xs","registrationId":"eeadea77-ffdc-4cba-b9fc-36f4e0e3ab3c"}%
 ## Clean Up
+```
+ 192  ~/workspace/aws-learning/eks   master ●  kubectl delete rs reg-service-rs
+replicaset.apps "reg-service-rs" deleted
 
+ 192  ~/workspace/aws-learning/eks   master ●  kubectl delete svc eprescription-reg-rs-svc
+service "eprescription-reg-rs-svc" deleted
+ 192  ~/workspace/aws-learning/eks   master ● 
+```
 ### Undo temp SG changes 
 ```
 aws ec2 revoke-security-group-ingress --group-id sg-0283eb6dc9e7b6142 --protocol tcp --port 32510 --cidr $MY_IP/32 --output text
 ```
+
