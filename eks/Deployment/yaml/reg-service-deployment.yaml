@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reg-service-deployment-yaml
+  labels:
+    app: backend-reg-service
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend-reg-service
+  template:
+    metadata:
+      labels:
+        app: backend-reg-service
+        tier: backend
+    spec:
+      containers:
+        - name: backend-reg-service
+          image: dockersubrata/eprescription-reg-service-image:5.0
+          ports:
+            - containerPort: 8081
+
