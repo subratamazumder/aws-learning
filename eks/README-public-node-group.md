@@ -44,7 +44,7 @@ kubectl expose pod eprescription-reg-pod  --type=NodePort --port=8081 --target-p
 ```
 kubectl get service -o wide
 ```
-# Authorize ingress rule of worker node for a specific node-port
+# Authorize (remote-access) ingress rule of worker node for a specific node-port
 aws ec2 authorize-security-group-ingress --group-id sg-0283eb6dc9e7b6142 --protocol tcp --port 31719 --cidr $MY_IP/32 --output text
 
 ### Testing
