@@ -79,14 +79,9 @@ reg-service-deployment-568f847c47-bjp2q   1/1     Running   0          22m
 
 ```
 ## Clean Up
-### Undo temp SG changes 
-```
-aws ec2 revoke-security-group-ingress --group-id sg-0283eb6dc9e7b6142 --protocol tcp --port 31719 --cidr $MY_IP/32 --output text
-```
 ### Delete EKS Objects
 ```
-kubectl delete svc eprescription-reg-svc
-kubectl delete pod eprescription-reg-pod
+kubectl delete deployment reg-service-deployment
 eksctl delete nodegroup --cluster=$MY_EKS_CLUSTER --name=$MY_EKS_PRV_NODE_GROUP1
 eksctl delete cluster $MY_EKS_CLUSTER
 ```

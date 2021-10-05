@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters: 
+  TableName: 
+    Type: String
+    Description: Enter table name
+Resources: 
+  myDynamoDBTable: 
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      AttributeDefinitions: 
+        - 
+          AttributeName: "ProfileId"
+          AttributeType: "S"
+      KeySchema: 
+        - 
+          AttributeName: "ProfileId"
+          KeyType: "HASH"
+      ProvisionedThroughput: 
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+      TableName: !Ref TableName
+      Tags:
+        -
+          Key: 'Name'
+          Value: 'eprescription poc'
+        -
+          Key: 'ConsumerApp'
+          Value: 'k8s-eprescrition-reg-service-pod'
+
+         
