@@ -6,7 +6,7 @@ metadata:
     app: backend-reg-service-dynamo
     tier: backend
 spec:
-  replicas: 3
+  replicas: 4
   selector:
     matchLabels:
       app: backend-reg-service-dynamo
@@ -19,7 +19,7 @@ spec:
       serviceAccountName: reg-service-dynamo-sa
       containers:
         - name: backend-reg-service-dynamo
-          image: dockersubrata/eprescription-reg-service-image:7.0
+          image: dockersubrata/eprescription-reg-service-image:12.0
           ports:
             - containerPort: 8081
 
